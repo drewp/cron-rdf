@@ -1,0 +1,23 @@
+@prefix : <http://bigasterisk.com/cron-rdf/v1#> .
+@prefix email: <http://bigasterisk.com/cron-rdf/email#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+<> rdfs:seeAlso <http://cr.yp.to/immhf.html> .
+<http://cr.yp.to/immhf.html> rdfs:label "Internet mail message header format" .
+
+<> rdfs:seeAlso <http://www.w3.org/TR/2005/NOTE-rdfcal-20050929/#L21805> .
+<http://www.w3.org/TR/2005/NOTE-rdfcal-20050929/#L21805> rdfs:label "Shop hours, recurring events and timezones" .
+
+:MailServer 
+  :host "b.c";
+  :bcc "drewp@b.c" .
+
+[a :Event;
+ :when [:day "monday"; :hour "17"];
+ :sendMail [email:from "drewp@"; # use full addresses here
+            email:to "drewp@";
+            email:subject "cron-rdf test";
+            email:body "5pm test"]
+].
+

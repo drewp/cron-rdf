@@ -1,0 +1,56 @@
+#!/usr/bin/python
+from rdflib.Graph import ConjunctiveGraph
+from rdflib import Namespace, RDF, Literal
+import smtplib, time, os
+from email.Message import Message
+
+CR = Namespace("http://bigasterisk.com/cron-rdf/v1#")
+EMAIL = Namespace("http://bigasterisk.com/cron-rdf/email#")
+XS = Namespace("http://www.w3.org/2001/XMLSchema#")
+
+def happensNow(graph, event):
+    when = graph.value(event, CR['when'])
+
+    now = time.localtime()
+    wday = time.strftime("%A", now).lower()
+    
+    if graph.value(when, CR['day']) not in [None, wday]:
+        return False
+
+    if graph.value(when, CR['hour']) not in [None, str(now.tm_hour)]:
+        return False
+    
+    return True
+
+def fire(graph, event):
+    for mail in graph.objects(event, CR['sendMail']):
+        email(graph, mail)
+        
+def email(graph, mail):
+    msg = Message()
+    msg['X-Mailer'] = "http://bigasterisk.com/cron-rdf/"
+    for header in ['from', 'subject', 'to']:
+        if (mail, EMAIL[header], None) in graph:
+            values = graph.objects(mail, EMAIL[header])
+            msg[header.capitalize()] = ", ".join(values)
+    msg['Bcc'] = ", ".join(graph.objects(CR['MailServer'], CR['bcc']))
+    msg.set_payload(str(graph.value(mail, EMAIL['body'], default='')))
+    mailHost = graph.value(CR['MailServer'], CR['host'])
+    assert mailHost
+    server = smtplib.SMTP(mailHost)
+    server.sendmail(graph.value(mail, EMAIL['from']),
+                    map(str, graph.objects(mail, EMAIL['to'])),
+                    msg.as_string())
+    print "sent msg", map(str, graph.objects(mail, EMAIL['to']))
+    server.quit()
+    
+
+        
+graph = ConjunctiveGraph()
+graph.parse(os.path.join(os.path.dirname(__file__), "table.n3"), format="n3")
+
+for event in graph.subjects(RDF.type, CR['Event']):
+    if happensNow(graph, event):
+        fire(graph, event)
+
+        
